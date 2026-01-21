@@ -1,0 +1,288 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  PRODUCER
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+}
+
+model User {
+  id              String        @id @default(uuid()) @db.Uuid
+  name            String?
+  email           String?       @unique
+  phone           String?       @unique
+  password        String?
+  role            Role          @default(USER)
+  isSubscribed    Boolean       @default(false)
+  isVerified      Boolean       @default(false)
+  status          UserStatus    @default(ACTIVE)
+  parentalControl Boolean       @default(false)
+  profileImage    String?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  sessions        Session[]
+  oauthAccounts   OAuthAccount[]
+  verification    VerificationToken[]
+  resetTokens     PasswordResetToken[]
+  videos          Video[]
+  comments        Comment[]
+  likes           Like[]
+  playlists       Playlist[]
+  downloadLicenses DownloadLicense[]
+  subscriptions   UserSubscription[]
+  videoProgress   VideoProgress[]
+  videoViews      VideoView[]
+  watchHistory WatchHistory[]
+}
+
+model OAuthAccount {
+  id           String   @id @default(uuid()) @db.Uuid
+  provider     String
+  providerId   String
+
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String   @db.Uuid
+
+  createdAt    DateTime @default(now())
+}
+
+model Session {
+  id            String   @id @default(uuid()) @db.Uuid
+  refreshToken  String   @unique
+  userAgent     String?
+  ipAddress     String?
+  expiresAt     DateTime
+
+  user          User     @relation(fields: [userId], references: [id])
+  userId        String   @db.Uuid
+
+  createdAt     DateTime @default(now())
+}
+
+model VerificationToken {
+  id          String   @id @default(uuid()) @db.Uuid
+  identifier  String
+  otp         String
+  expiresAt   DateTime
+
+  user        User?    @relation(fields: [userId], references: [id])
+  userId      String?  @db.Uuid
+
+  createdAt   DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id          String   @id @default(uuid()) @db.Uuid
+  token       String   @unique
+  expiresAt   DateTime
+
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String   @db.Uuid
+
+  createdAt   DateTime @default(now())
+}
+
+model Video {
+  id              String   @id @default(uuid()) @db.Uuid
+  title           String
+  description     String?
+
+  videoUrl         String
+  video360Url      String?
+  video480Url      String?
+  video720Url      String?
+  video1080Url     String?
+  thumbnailUrl     String?
+
+  creatorId       String   @db.Uuid
+  status          String   @default("pending")
+  createdAt       DateTime @default(now())
+
+  creator         User     @relation(fields: [creatorId], references: [id])
+  comments        Comment[]
+  likes           Like[]
+  playlistVideos  PlaylistVideo[]
+  downloadLicenses DownloadLicense[]
+  videoProgress   VideoProgress[]
+  videoViews      VideoView[]
+  watchHistory WatchHistory[]
+ 
+}
+
+model Comment {
+  id         String   @id @default(uuid()) @db.Uuid
+  content    String
+  videoId    String   @db.Uuid
+  userId     String   @db.Uuid
+  parentId   String?  @db.Uuid
+
+  createdAt  DateTime @default(now())
+
+  video      Video    @relation(fields: [videoId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+
+  parent     Comment?   @relation("CommentReplies", fields: [parentId], references: [id])
+  replies    Comment[]  @relation("CommentReplies")
+}
+
+model Like {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  videoId   String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  video     Video    @relation(fields: [videoId], references: [id])
+
+  @@unique([userId, videoId])
+}
+
+
+model Playlist {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String
+  description String?
+  coverUrl    String?        // stored in Supabase images bucket
+  creatorId   String   @db.Uuid
+  albumId     String?  
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  videos      PlaylistVideo[]
+  album       Album?     @relation(fields: [albumId], references: [id])
+  creator     User     @relation(fields: [creatorId], references: [id])
+}
+
+model PlaylistVideo {
+  id         String   @id @default(uuid()) @db.Uuid
+  playlistId String   @db.Uuid
+  videoId    String   @db.Uuid
+  position   Int
+  createdAt  DateTime @default(now())
+
+  playlist Playlist @relation(fields: [playlistId], references: [id])
+  video    Video    @relation(fields: [videoId], references: [id])
+
+  @@unique([playlistId, videoId])
+}
+
+
+model Album {
+  id          String     @id @default(uuid())
+  title       String
+  description String?
+  coverUrl    String?
+  creatorId   String
+  createdAt   DateTime   @default(now())
+
+  playlists   Playlist[]
+}
+
+
+model DownloadLicense {
+  id        String   @id @default(uuid()) @db.Uuid
+  videoId   String   @db.Uuid
+  userId    String   @db.Uuid
+  deviceId  String
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  video  Video  @relation(fields: [videoId], references: [id])
+
+  @@unique([videoId, userId, deviceId])
+}
+
+
+
+model SubscriptionPlan {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String
+  price         Float
+  durationDays  Int
+  createdAt     DateTime @default(now())
+
+  subscriptions UserSubscription[]
+}
+
+model UserSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  planId    String   @db.Uuid
+  startAt   DateTime
+  endAt     DateTime
+  isActive  Boolean  @default(true)
+
+  user      User              @relation(fields: [userId], references: [id])
+  plan      SubscriptionPlan  @relation(fields: [planId], references: [id])
+}
+
+
+model VideoProgress {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  videoId   String   @db.Uuid
+  position  Int      // last watched second
+  updatedAt DateTime @updatedAt
+
+  user      User   @relation(fields: [userId], references: [id])
+  video     Video  @relation(fields: [videoId], references: [id])
+  @@unique([userId, videoId])
+}
+
+
+model VideoView {
+  id        String   @id @default(uuid()) @db.Uuid
+  videoId   String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  video Video @relation(fields: [videoId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([videoId, userId])
+}
+
+
+model WatchHistory {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  videoId       String   @db.Uuid
+
+  watchSeconds  Int
+  totalSeconds  Int
+  watchPercent  Float
+  isCompleted   Boolean @default(false)
+  watchCount    Int     @default(1)
+
+  lastWatchedAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id])
+  video Video @relation(fields: [videoId], references: [id])
+
+  @@unique([userId, videoId])
+}
