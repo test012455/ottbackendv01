@@ -1,1 +1,19 @@
+plugins {
+    id 'java'
+    id 'org.sonarqube' version '4.4.1.3373'
+}
+ 
+group = 'com.example'
+version = '1.0.0'
+ 
+repositories {
+    mavenCentral()
+}
 
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3'
+}
+
+test {
+    useJUnitPlatform()
+}
