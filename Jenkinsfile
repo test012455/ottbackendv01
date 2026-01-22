@@ -11,7 +11,7 @@ pipeline {
             steps {
                 git branch: 'main',
                     credentialsId: 'github-creds',
-                    url: 'https://github.com/ramky3064/ottbackendv01.git'
+                    url: 'https://github.com/test012455/ottbackendv01.git'
             }
         }
  
