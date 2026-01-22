@@ -5,4 +5,4 @@ pluginManagement {
     }
 }
  
-rootProject.name = 'ottbackend'
+rootProject.name = 'ottbackendv01'
