@@ -43,24 +43,23 @@ pipeline {
                 }
             }
         }
-        
-      stage('Verify PM2') {
-    steps {
-        bat 'C:\\Users\\hi\\AppData\\Roaming\\npm\\pm2 -v'
-         }
+ 
+        stage('Verify PM2') {
+                  steps {
+                   bat 'where pm2'
+                   bat 'pm2 -v'
+  }
 }
-
-stage('Deploy with PM2') {
+      stage('Deploy with PM2') {
     steps {
         bat '''
-            echo Deploying with PM2...
-            C:\\Users\\hi\\AppData\\Roaming\\npm\\pm2 delete ott-backend || exit /B 0
-            C:\\Users\\hi\\AppData\\Roaming\\npm\\pm2 start dist/main.js --name ott-backend
-            C:\\Users\\hi\\AppData\\Roaming\\npm\\pm2 save
+        echo Deploying with PM2...
+
+        pm2 delete ott-backend || exit /B 0
+
+        pm2 start dist/main.js --name ott-backend
+        pm2 save
         '''
-    }
-}
-        
     }
 }
 
